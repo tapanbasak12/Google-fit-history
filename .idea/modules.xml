@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/HistoryData.iml" filepath="$PROJECT_DIR$/HistoryData.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/HistoryData.iml" filepath="$PROJECT_DIR$/HistoryData.iml" group="HistoryData" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="HistoryData/app" />
     </modules>
   </component>
 </project>

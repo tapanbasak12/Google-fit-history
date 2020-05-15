@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">HistoryData</string>
+
+    <string name="ok">OK</string>
+    <string name="Permissions_continue">Continue</string>
+    <string name="Permissions_not_now">Not now</string>
+    <string name="Permissions_permission_required">Permission required</string>
 </resources>
