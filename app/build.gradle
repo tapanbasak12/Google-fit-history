@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     signingConfigs {
         debug {
-            storeFile file('/home/rc/android/Google-fit-history/debug.keystore')
+            storeFile file('/home/tapan/Projects/android-fit/HistoryData/app/debug.keystore')
         }
     }
     compileSdkVersion 29

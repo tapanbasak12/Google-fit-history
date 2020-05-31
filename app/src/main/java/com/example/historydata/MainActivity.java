@@ -23,6 +23,7 @@ import com.example.historydata.permissions.Permissions;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.fitness.Fitness;
 import com.google.android.gms.fitness.FitnessOptions;
+import com.google.android.gms.fitness.data.Bucket;
 import com.google.android.gms.fitness.data.DataPoint;
 import com.google.android.gms.fitness.data.DataSet;
 import com.google.android.gms.fitness.data.DataSource;
@@ -67,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button button2= findViewById(R.id.button);
+        Button button2 = findViewById(R.id.button);
         button2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -79,17 +80,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-
-        Button button= findViewById(R.id.btn_request);
+        Button button = findViewById(R.id.btn_request);
         //On clicking the button we check if the permission was granted before.
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 //if granted, show a toast of granted else go to request method
-                if(ContextCompat.checkSelfPermission(MainActivity.this,
-                        Manifest.permission.ACTIVITY_RECOGNITION)== PackageManager.PERMISSION_GRANTED){
+                if (ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(MainActivity.this, "Already Granted", Toast.LENGTH_SHORT).show();
-                }else{
+                } else {
                     requestPermission();
                 }
             }
@@ -117,7 +117,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    /** Launches the Google SignIn activity to request OAuth permission for the user. */
+    /**
+     * Launches the Google SignIn activity to request OAuth permission for the user.
+     */
     private void requestOAuthPermission() {
         FitnessOptions fitnessOptions = getFitnessSignInOptions();
         GoogleSignIn.requestPermissions(
@@ -127,71 +129,67 @@ public class MainActivity extends AppCompatActivity {
                 fitnessOptions);
     }
 
-    /**
-     * A wrapper for {@link #findFitnessDataSources}. If the user account has OAuth permission,
-     * continue to {@link #findFitnessDataSources}, else request OAuth permission for the account.
-     */
+
     private void findFitnessDataSourcesWrapper() {
         if (hasOAuthPermission()) {
-//            findFitnessDataSources();
             readStepCount();
         } else {
             requestOAuthPermission();
         }
     }
 
-    /** Gets the {@link FitnessOptions} in order to check or request OAuth permission for the user. */
+    /**
+     * Gets the {@link FitnessOptions} in order to check or request OAuth permission for the user.
+     */
     private FitnessOptions getFitnessSignInOptions() {
         return FitnessOptions.builder()
+                .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
+                .addDataType(DataType.AGGREGATE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
                 .addDataType(DataType.TYPE_LOCATION_SAMPLE)
                 .addDataType(DataType.TYPE_ACTIVITY_SEGMENT)
                 .build();
     }
 
-    /** Checks if user's account has OAuth permission to Fitness API. */
+    /**
+     * Checks if user's account has OAuth permission to Fitness API.
+     */
     private boolean hasOAuthPermission() {
         FitnessOptions fitnessOptions = getFitnessSignInOptions();
         return GoogleSignIn.hasPermissions(GoogleSignIn.getLastSignedInAccount(this), fitnessOptions);
     }
-    /** Finds available data sources and attempts to register on a specific {@link DataType}. */
-    private void findFitnessDataSources() {
-        // [START find_data_sources]
-        // Note: Fitness.SensorsApi.findDataSources() requires the ACCESS_FINE_LOCATION permission.
-        Fitness.getSensorsClient(this, GoogleSignIn.getLastSignedInAccount(this))
-                .findDataSources(
-                        new DataSourcesRequest.Builder()
-                                .setDataTypes(DataType.TYPE_LOCATION_SAMPLE)
-                                .setDataSourceTypes(DataSource.TYPE_RAW)
-                                .build())
-                .addOnSuccessListener(
-                        new OnSuccessListener<List<DataSource>>() {
-                            @Override
-                            public void onSuccess(List<DataSource> dataSources) {
-                                for (DataSource dataSource : dataSources) {
-                                    Log.i(TAG, "Data source found: " + dataSource.toString());
-                                    Log.i(TAG, "Data Source type: " + dataSource.getDataType().getName());
 
-                                    // Let's register a listener to receive Activity data!
-                                    if (dataSource.getDataType().equals(DataType.TYPE_LOCATION_SAMPLE)
-                                            && mListener == null) {
-                                        Log.i(TAG, "Data source for LOCATION_SAMPLE found!  Registering.");
-//                                        registerFitnessDataListener(dataSource, DataType.TYPE_LOCATION_SAMPLE);
-                                    }
-                                }
+
+    private Task<DataReadResponse> readStepCount() {
+        // Begin by creating the query.
+        DataReadRequest readRequest = queryFitnessData();
+
+        // Invoke the History API to fetch the data with the query
+        return Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this))
+                .readData(readRequest)
+                .addOnSuccessListener(
+                        new OnSuccessListener<DataReadResponse>() {
+                            @Override
+                            public void onSuccess(DataReadResponse dataReadResponse) {
+                                // For the sake of the sample, we'll print the data so we can see what we just
+                                // added. In general, logging fitness information should be avoided for privacy
+                                // reasons.
+                                printData(dataReadResponse);
                             }
                         })
                 .addOnFailureListener(
                         new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
-                                Log.e(TAG, "failed", e);
+                                Log.e(TAG, "There was a problem reading the data.", e);
                             }
                         });
-        // [END find_data_sources]
     }
 
-    private void readStepCount () {
+
+    public static DataReadRequest queryFitnessData() {
+        // [START build_read_data_request]
         // Setting a start and end date using a range of 1 week before this moment.
+
         Calendar cal = Calendar.getInstance();
         Date now = new Date();
         cal.setTime(now);
@@ -205,39 +203,38 @@ public class MainActivity extends AppCompatActivity {
 
         DataReadRequest readRequest =
                 new DataReadRequest.Builder()
-                        // The data request can specify multiple data types to return, effectively
-                        // combining multiple data queries into one call.
-                        // In this example, it's very unlikely that the request is for several hundred
-                        // datapoints each consisting of a few steps and a timestamp.  The more likely
-                        // scenario is wanting to see how many steps were walked per day, for 7 days.
                         .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
-                        // Analogous to a "Group By" in SQL, defines how data should be aggregated.
-                        // bucketByTime allows for a time span, whereas bucketBySession would allow
-                        // bucketing by "sessions", which would need to be defined in code.
                         .bucketByTime(1, TimeUnit.DAYS)
                         .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
                         .build();
+        // [END build_read_data_request]
 
-        Task<DataReadResponse> response = Fitness.getHistoryClient(this, GoogleSignIn.getLastSignedInAccount(this)).readData(readRequest);
-        response.addOnCompleteListener(this, new OnCompleteListener<DataReadResponse>() {
-            @Override
-            public void onComplete(@NonNull Task<DataReadResponse> task) {
+        return readRequest;
+    }
 
-                if (task.isSuccessful()) {
-                    Toast.makeText(MainActivity.this, "successful", Toast.LENGTH_LONG).show();
-                } else {
-                    Toast.makeText(MainActivity.this, "failed", Toast.LENGTH_LONG).show();
-                }
-                if(!task.isSuccessful()) return;
-                List<DataSet> dataSets = task.getResult().getDataSets();
-                Toast.makeText(MainActivity.this, "" + dataSets.size(), Toast.LENGTH_LONG).show();
-                for (DataSet dataSet: dataSets) {
+    public static void printData(DataReadResponse dataReadResult) {
+        // [START parse_read_data_result]
+        // If the DataReadRequest object specified aggregated data, dataReadResult will be returned
+        // as buckets containing DataSets, instead of just DataSets.
+        if (dataReadResult.getBuckets().size() > 0) {
+            Log.i(
+                    TAG, "Number of returned buckets of DataSets is: " + dataReadResult.getBuckets().size());
+            for (Bucket bucket : dataReadResult.getBuckets()) {
+                List<DataSet> dataSets = bucket.getDataSets();
+                for (DataSet dataSet : dataSets) {
                     dumpDataSet(dataSet);
                 }
             }
-        });
+        } else if (dataReadResult.getDataSets().size() > 0) {
+            Log.i(TAG, "Number of returned DataSets is: " + dataReadResult.getDataSets().size());
+            for (DataSet dataSet : dataReadResult.getDataSets()) {
+                dumpDataSet(dataSet);
+            }
+        }
+        // [END parse_read_data_result]
     }
 
+    // [START parse_dataset]
     private static void dumpDataSet(DataSet dataSet) {
         Log.i(TAG, "Data returned for Data type: " + dataSet.getDataType().getName());
         DateFormat dateFormat = getTimeInstance();
@@ -252,36 +249,37 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    // [END parse_dataset]
 
     private void requestPermission() {
-        if(ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACTIVITY_RECOGNITION)){
-                new AlertDialog.Builder(this)
-                        .setTitle("Permission Needed")
-                        .setMessage("HealthLedger needs your permission")
-                        .setPositiveButton("ok", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                ActivityCompat.requestPermissions(MainActivity.this, new String[] {Manifest.permission.ACTIVITY_RECOGNITION}, REQUEST_CODE);
-                            }
-                        })
-                        .setNegativeButton("cancel", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                dialogInterface.dismiss();
-                            }
-                        })
-                        .create().show();
-        }else{
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACTIVITY_RECOGNITION}, REQUEST_CODE);
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACTIVITY_RECOGNITION)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Permission Needed")
+                    .setMessage("HealthLedger needs your permission")
+                    .setPositiveButton("ok", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, REQUEST_CODE);
+                        }
+                    })
+                    .setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.dismiss();
+                        }
+                    })
+                    .create().show();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, REQUEST_CODE);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if(requestCode == REQUEST_CODE){
-            if(grantResults.length>0 && grantResults[0]==PackageManager.PERMISSION_GRANTED){
+        if (requestCode == REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Permission Granted", Toast.LENGTH_SHORT).show();
-            }else{
+            } else {
                 Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
 
             }
@@ -292,8 +290,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == REQUEST_OAUTH_REQUEST_CODE) {
-//                findFitnessDataSources();
-                readStepCount();
+                    readStepCount();
             }
         }
     }
