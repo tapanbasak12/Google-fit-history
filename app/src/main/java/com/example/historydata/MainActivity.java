@@ -17,11 +17,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.historydata.permissions.Permissions;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.fitness.Fitness;
+import com.google.android.gms.fitness.FitnessActivities;
 import com.google.android.gms.fitness.FitnessOptions;
 import com.google.android.gms.fitness.data.Bucket;
 import com.google.android.gms.fitness.data.DataPoint;
@@ -29,12 +31,15 @@ import com.google.android.gms.fitness.data.DataSet;
 import com.google.android.gms.fitness.data.DataSource;
 import com.google.android.gms.fitness.data.DataType;
 import com.google.android.gms.fitness.data.Field;
+import com.google.android.gms.fitness.data.Session;
 import com.google.android.gms.fitness.data.Value;
 import com.google.android.gms.fitness.request.DataReadRequest;
 import com.google.android.gms.fitness.request.DataSourcesRequest;
 import com.google.android.gms.fitness.request.OnDataPointListener;
 import com.google.android.gms.fitness.request.SensorRequest;
+import com.google.android.gms.fitness.request.SessionReadRequest;
 import com.google.android.gms.fitness.result.DataReadResponse;
+import com.google.android.gms.fitness.result.SessionReadResponse;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -45,6 +50,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static java.text.DateFormat.getDateInstance;
 import static java.text.DateFormat.getTimeInstance;
@@ -52,6 +58,8 @@ import static java.text.DateFormat.getTimeInstance;
 public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = "BasicSensorsApi";
+
+
 
     //Request Code for Activity
     private static final int REQUEST_CODE = 1;
@@ -68,21 +76,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button button2 = findViewById(R.id.button);
-        button2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                ActivityCompat.requestPermissions(MainActivity.this,
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        REQUEST_CODE);
-
-            }
-        });
 
 
         Button button = findViewById(R.id.btn_request);
         //On clicking the button we check if the permission was granted before.
         button.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
             @Override
             public void onClick(View view) {
                 //if granted, show a toast of granted else go to request method
@@ -115,8 +114,6 @@ public class MainActivity extends AppCompatActivity {
         }
 //        findFitnessDataSourcesWrapper();
     }
-
-
     /**
      * Launches the Google SignIn activity to request OAuth permission for the user.
      */
@@ -130,9 +127,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void findFitnessDataSourcesWrapper() {
         if (hasOAuthPermission()) {
             readStepCount();
+            //readSleepData();
         } else {
             requestOAuthPermission();
         }
@@ -145,6 +144,8 @@ public class MainActivity extends AppCompatActivity {
         return FitnessOptions.builder()
                 .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
                 .addDataType(DataType.AGGREGATE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
+                .addDataType(DataType.TYPE_HEART_RATE_BPM, FitnessOptions.ACCESS_READ)
+                .addDataType(DataType.AGGREGATE_HEART_RATE_SUMMARY, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.TYPE_LOCATION_SAMPLE)
                 .addDataType(DataType.TYPE_ACTIVITY_SEGMENT)
                 .build();
@@ -204,8 +205,10 @@ public class MainActivity extends AppCompatActivity {
         DataReadRequest readRequest =
                 new DataReadRequest.Builder()
                         .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
-                        .bucketByTime(1, TimeUnit.DAYS)
+                        .aggregate(DataType.TYPE_HEART_RATE_BPM, DataType.AGGREGATE_HEART_RATE_SUMMARY)
+                        .bucketByActivitySegment( 1, TimeUnit.MINUTES) // just segement time over 1 minute will be list
                         .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .enableServerQueries()
                         .build();
         // [END build_read_data_request]
 
@@ -238,6 +241,7 @@ public class MainActivity extends AppCompatActivity {
     private static void dumpDataSet(DataSet dataSet) {
         Log.i(TAG, "Data returned for Data type: " + dataSet.getDataType().getName());
         DateFormat dateFormat = getTimeInstance();
+        Log.i(TAG, "Fields: " + dataSet.getDataSource().getDataType().getFields());
 
         for (DataPoint dp : dataSet.getDataPoints()) {
             Log.i(TAG, "Data point:");
@@ -249,6 +253,10 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+
+
     // [END parse_dataset]
 
     private void requestPermission() {

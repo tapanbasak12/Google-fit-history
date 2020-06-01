@@ -7,22 +7,22 @@
     tools:context="com.example.historydata.MainActivity">
 
    <Button
-       android:layout_width="match_parent"
-       android:layout_height="wrap_content"
-       android:layout_marginLeft="60dp"
-       android:layout_marginRight="60dp"
-       android:text="Request Permission"
        android:id="@+id/btn_request"
+       android:layout_width="201dp"
+       android:layout_height="69dp"
+       android:text="Request Permission"
 
-       />
+       tools:layout_editor_absoluteX="-4dp"
+       tools:layout_editor_absoluteY="33dp" />
 
-   <Button
-       android:id="@+id/button"
-       android:layout_width="157dp"
-       android:layout_height="83dp"
-       android:text="Request Permission 2"
-       tools:layout_editor_absoluteX="173dp"
-       tools:layout_editor_absoluteY="220dp" />
+
+   <TextView
+       android:id="@+id/textViewData"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:text="TextView"
+       tools:layout_editor_absoluteX="171dp"
+       tools:layout_editor_absoluteY="244dp" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
