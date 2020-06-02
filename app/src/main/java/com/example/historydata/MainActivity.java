@@ -57,7 +57,7 @@ import static java.text.DateFormat.getTimeInstance;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String TAG = "BasicSensorsApi";
+    public static final String TAG = "HealthLedger";
 
 
 
@@ -146,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
                 .addDataType(DataType.AGGREGATE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
                 .addDataType(DataType.TYPE_HEART_RATE_BPM, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.AGGREGATE_HEART_RATE_SUMMARY, FitnessOptions.ACCESS_READ)
+                .addDataType(DataType.AGGREGATE_CALORIES_EXPENDED, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.TYPE_LOCATION_SAMPLE)
                 .addDataType(DataType.TYPE_ACTIVITY_SEGMENT)
                 .build();
@@ -195,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
         Date now = new Date();
         cal.setTime(now);
         long endTime = cal.getTimeInMillis();
-        cal.add(Calendar.WEEK_OF_YEAR, -1);
+        cal.add(Calendar.DAY_OF_YEAR, -1);
         long startTime = cal.getTimeInMillis();
 
         java.text.DateFormat dateFormat = getDateInstance();
@@ -206,8 +207,9 @@ public class MainActivity extends AppCompatActivity {
                 new DataReadRequest.Builder()
                         .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
                         .aggregate(DataType.TYPE_HEART_RATE_BPM, DataType.AGGREGATE_HEART_RATE_SUMMARY)
+                        .aggregate(DataType.TYPE_CALORIES_EXPENDED, DataType.AGGREGATE_CALORIES_EXPENDED)
                         .bucketByActivitySegment( 1, TimeUnit.MINUTES) // just segement time over 1 minute will be list
-                        .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .setTimeRange(startTime, endTime, TimeUnit.HOURS)
                         .enableServerQueries()
                         .build();
         // [END build_read_data_request]
@@ -242,8 +244,11 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "Data returned for Data type: " + dataSet.getDataType().getName());
         DateFormat dateFormat = getTimeInstance();
         Log.i(TAG, "Fields: " + dataSet.getDataSource().getDataType().getFields());
+        int count=0;
 
         for (DataPoint dp : dataSet.getDataPoints()) {
+            count= count+1;
+            Log.i(TAG, "________________________:"+ count);
             Log.i(TAG, "Data point:");
             Log.i(TAG, "\tType: " + dp.getDataType().getName());
             Log.i(TAG, "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
