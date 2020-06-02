@@ -205,13 +205,21 @@ public class MainActivity extends AppCompatActivity {
 
         DataReadRequest readRequest =
                 new DataReadRequest.Builder()
+                        // The data request can specify multiple data types to return, effectively
+                        // combining multiple data queries into one call.
+                        // In this example, it's very unlikely that the request is for several hundred
+                        // datapoints each consisting of a few steps and a timestamp.  The more likely
+                        // scenario is wanting to see how many steps were walked per day, for 7 days.
                         .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
                         .aggregate(DataType.TYPE_HEART_RATE_BPM, DataType.AGGREGATE_HEART_RATE_SUMMARY)
                         .aggregate(DataType.TYPE_CALORIES_EXPENDED, DataType.AGGREGATE_CALORIES_EXPENDED)
-                        .bucketByActivitySegment( 1, TimeUnit.MINUTES) // just segement time over 1 minute will be list
-                        .setTimeRange(startTime, endTime, TimeUnit.HOURS)
-                        .enableServerQueries()
+                                // Analogous to a "Group By" in SQL, defines how data should be aggregated.
+                        // bucketByTime allows for a time span, whereas bucketBySession would allow
+                        // bucketing by "sessions", which would need to be defined in code.
+                        .bucketByTime(1, TimeUnit.DAYS)
+                        .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
                         .build();
+
         // [END build_read_data_request]
 
         return readRequest;
@@ -241,21 +249,22 @@ public class MainActivity extends AppCompatActivity {
 
     // [START parse_dataset]
     private static void dumpDataSet(DataSet dataSet) {
-        Log.i(TAG, "Data returned for Data type: " + dataSet.getDataType().getName());
+        Log.i(TAG, "Data returned for Data type: " + dataSet.getDataType().getName()+ "\n");
         DateFormat dateFormat = getTimeInstance();
-        Log.i(TAG, "Fields: " + dataSet.getDataSource().getDataType().getFields());
-        int count=0;
+        //Log.i(TAG, "Fields: " + dataSet.getDataSource().getDataType().getFields());
+
 
         for (DataPoint dp : dataSet.getDataPoints()) {
-            count= count+1;
-            Log.i(TAG, "________________________:"+ count);
+
             Log.i(TAG, "Data point:");
-            Log.i(TAG, "\tType: " + dp.getDataType().getName());
-            Log.i(TAG, "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
-            Log.i(TAG, "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
+            //Log.i(TAG, "\tType: " + dp.getDataType().getName());
+            //Log.i(TAG, "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
+            //Log.i(TAG, "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
             for (Field field : dp.getDataType().getFields()) {
-                Log.i(TAG, "\tField: " + field.getName() + " Value: " + dp.getValue(field));
+
+                Log.i(TAG, /*"\tField: " + */field.getName() + " Value: " + dp.getValue(field));
             }
+            Log.i(TAG, "________________________________________________________\n");
         }
     }
 
